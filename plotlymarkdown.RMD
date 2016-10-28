@@ -1,0 +1,46 @@
+---
+title: "PlotlyMarkdown"
+author: "Adrian Martin"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+## Plotly graph - homicides in Baltimore by day of the week, 2011 - 2015
+
+
+```{r}
+library(plotly)
+library(RSocrata)
+library(lubridate)
+murders <- read.socrata("https://data.baltimorecity.gov/Public-Safety/HOMICIDES/gzf8-pc84")
+murders <- murders[which(murders$CrimeDate < "2016-01-01"),]
+murders$Location <- as.character(murders$Location)
+murders$Location.1 <- as.character(murders$Location.1)
+murders$Neighborhood <- as.character(murders$Neighborhood)
+extractGPS <- function(location.1) {
+    lat <- as.numeric()
+    lng <- as.numeric()
+    for(i in 1:length(location.1)){
+        lat[i] <- substr(x = location.1[i], 
+                         start = 2, 
+                         stop = regexpr(text = location.1[i], pattern = ",") - 1)
+        lng[i] <- substr(x = location.1[i],
+                         start = regexpr(text = location.1[i], pattern = "-") - 1,
+                         stop = nchar(location.1[i]) - 1)
+    }
+    return(data.frame(lat = as.numeric(lat), lng = as.numeric(lng)))
+}
+murders$coords <- extractGPS(murders$Location.1)
+murders$year <- as.factor(lubridate::year(murders$CrimeDate))
+murders$DoW <- wday(murders$CrimeDate, label = TRUE)
+tab <- table(murders$DoW, murders$year)
+plot_ly(z = tab, type = "heatmap") %>%
+    layout(xaxis = list(title = "Year (2011 - 2015)"), 
+           yaxis = list(title = "Day of Week (Sunday (bottom) - Saturday (top)"))
+
+
+```
